@@ -1,9 +1,12 @@
 // 1. Import Server
 import express from "express";
+import bodyParser from "body-parser";
 import productRouter from "./src/features/product/product.routes.js";
 
 // 2. Create Server
 const server = express();
+
+server.use(bodyParser.json());
 
 // For all requests related to product, redirect to product routes
 // localhost:3000/api/products
