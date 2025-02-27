@@ -18,4 +18,6 @@ productRouter.post(
   productController.addProduct
 );
 
+productRouter.get("/:id", productController.getOneProduct);
+
 export default productRouter;
