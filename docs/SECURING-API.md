@@ -175,4 +175,86 @@ with the message "Invalid credentials."
 <img src="./images/user_signin_invalid.png" alt="User SignIn Invalid" width="600" height="auto">
 
 
+## Basic Authentication
+
+### 1. Model (user.model.js):
+Added static method of UserModel that returns all users (UserModel.getAll()).
+```javascript
+export class UserModel {
+  // Other methods like signUp, signIn.
+  
+  static getAll() { return users; }
+}
+
+```
+
+### 2. Middleware Logic (basicAuthorizer):
+
+1. **Check Authorization Header:** Verify if the Authorization header exists.
+2. **Extract Base64 Credentials:** Remove the "Basic " prefix.
+3. **Decode Credentials:** Convert from Base64 to "username:password" format.
+4. **Validate Format:** Ensure proper splitting into username and password.
+5. **Authenticate User:** Match credentials against the user data (UserModel.getAll()).
+6. **Grant or Deny Access:** If credentials match, call next(); otherwise, send a 401 Unauthorized response.
+
+```javascript
+import { UserModel } from "../features/user/user.model.js";
+
+const basicAuthorizer = (req, res, next) => {
+  // 1. Check if the Authorization header is present in the request
+  const authHeader = req.headers["authorization"];
+  if (!authHeader) {
+    return res.status(401).send("No authorization details found!");
+  }
+  console.log("Authorization Header:", authHeader);
+
+  // 2. Extract the Base64-encoded credentials from the Authorization header
+  // The header format is "Basic <base64encodedCredentials>"
+  const base64Credentials = authHeader.replace("Basic ", "");
+  console.log("Base64 Credentials:", base64Credentials);
+
+  // 3. Decode the Base64-encoded credentials to get the "username:password" format
+  const decodeCreds = Buffer.from(base64Credentials, "base64").toString("utf8");
+  console.log("Decoded Credentials:", decodeCreds); // Expected format: "username:password"
+
+  // 4. Split the decoded string into username and password
+  const creds = decodeCreds.split(":");
+  if (creds.length < 2) {
+    return res.status(401).send("Invalid authorization format");
+  }
+
+  // 5. Validate credentials against the user database
+  const user = UserModel.getAll().find(
+    (u) => u.email === creds[0] && u.password === creds[1]
+  );
+
+  // 6. If a valid user is found, proceed to the next middleware
+  if (user) {
+    console.log("Authorization successful for user:", creds[0]);
+    next();
+  } else {
+    // 7. If credentials are invalid, return a 401 Unauthorized response
+    return res.status(401).send("Incorrect Credentials");
+  }
+};
+
+export default basicAuthorizer;
+```
+### 2. Applying Middleware in server.js
+1. Import `basicAuthorizer` middleware.
+2. Apply basicAuthorizer middleware to protected routes (/api/products).
+3. Leave authentication open for /api/users routes (e.g., for signup/login).
+```javascript
+import basicAuthorizer from "./src/middlewares/basicAuth.middleware.js";
+
+server.use("/api/products", basicAuthorizer, productRouter); 
+```
+
+#### KEY POINTS
+- Protected Route: Only authorized users can access /api/products.
+- Open Route: All users can access /api/users (for signup/login).
+- Authorization Logic: Only proceeds if credentials are correct.
+
+
+
 
